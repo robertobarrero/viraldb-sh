@@ -180,7 +180,7 @@ Manifest + checksums		auto
 ├── representatives__all__c0.990000.fasta
 └── manifest/
 ```
-### Why Bash (and not a worflow engine)?
+### Pipeline design and deployment
 - This pipeline intentionally avoids heavy workflow engines to:
   • Reduce cognitive overhead
   • Keep execution transparent
