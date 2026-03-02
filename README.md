@@ -1,6 +1,6 @@
-#--------------------------------------------------------------------#
- viraldb-sh - a pipeline to harmonise plant viral genomes
-#--------------------------------------------------------------------#
+#
+ viraldb-sh - A pipeline for building a harmonized plant viral database
+-
 
 viraldb-sh is a lightweight, Bash-based pipeline for building a curated viral database
 from NCBI Virus (GenBank + RefSeq) and ViroidDB, with taxonomy enrichment, sequence 
