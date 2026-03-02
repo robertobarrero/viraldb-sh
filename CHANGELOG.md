@@ -11,50 +11,71 @@ This project follows:
 ## [v0.1] – 2026-03-02
 
 ### Added
-- Bash-based viral database construction pipeline (`viraldb-sh`)
-- Support for:
-  - Local execution
+- **viraldb-sh**: a lightweight, Bash-based pipeline for building a curated plant viral database
+- Support for multiple execution environments:
+  - Local / interactive shell
   - PBS Pro
   - SLURM
 - Config-driven execution via `config_viralDB.txt`
 - Validation mode (`--validate`)
-  - Checks required executables
-  - Verifies input files and writable directories
+  - Verifies required executables on `PATH`
+  - Checks input files and output directory permissions
+  - Confirms presence of all pipeline scripts
 - Dry-run mode (`--dry-run`)
-  - Prints commands without executing
+  - Prints all commands without executing them
+  - Enables safe inspection and debugging prior to execution
 - Automatic detection of run directory:
   - `PBS_O_WORKDIR`
   - `SLURM_SUBMIT_DIR`
-  - Current directory fallback
-- Centralised logging per run (`logs/viraldb_<DATE>.log`)
-- Manifest generation:
-  - Pipeline version
-  - Tool versions
-  - Configuration snapshot
-- SHA256 checksums for key outputs
+  - Current working directory fallback
+- Centralised logging per run:
+  - Logs written to `logs/viraldb_<DATE>.log`
+- Reproducibility features:
+  - Manifest generation per run
+  - Pipeline version stamping
+  - Tool version recording
+  - Configuration snapshotting
+  - SHA256 checksums for key outputs
 
-### Pipeline steps
-1. Download NCBI Virus (GenBank + RefSeq) and ViroidDB
+### Pipeline workflow
+1. Download viral sequences from:
+   - NCBI Virus (GenBank + RefSeq)
+   - ViroidDB
 2. Enrich FASTA headers with taxonomic lineage
 3. Merge, filter, and sort sequences
-4. Cluster sequences with CD-HIT-EST
-5. Summarise clusters and mixed-species membership
+   - Minimum length filtering
+   - Ambiguous base (N) filtering
+4. Cluster sequences using CD-HIT-EST
+   - Identity thresholds: `1.0`, `0.995`, `0.99`
+5. Summarise clusters
+   - Cluster size statistics
+   - Detection of mixed-species clusters
 6. Phase 2 representative selection
+   - Policy-based, hierarchical representative selection
 
 ### Configuration
-- User-configurable clustering memory (`CDHIT_MEM_MB`)
-- User-configurable CPU usage
-- Identity thresholds: `1.0`, `0.995`, `0.99`
-- Policy-based Phase 2 representative selection
+- User-configurable parameters via `config_viralDB.txt`, including:
+  - CPU usage
+  - CD-HIT memory allocation (`CDHIT_MEM_MB`)
+  - Minimum sequence length
+  - Maximum ambiguous base fraction
+  - Phase 2 representative selection policy
+- Identity thresholds configurable at clustering time
 
 ### Notes
-- This release prioritises transparency, debuggability, and HPC safety.
-- No workflow engine dependency by design.
+- This release prioritises:
+  - Transparency
+  - Reproducibility
+  - HPC safety
+  - Ease of debugging
+- No workflow engine dependency by design (pure Bash + Python).
 
 ---
 
 ## [Unreleased]
 
 ### Planned
-- Optional checksum validation of existing outputs
-- Optional container support (Apptainer/Singularity)
+- Optional checksum verification of existing outputs
+- Optional container support (Apptainer / Singularity)
+- Optional resume / checkpoint support (if kept lightweight)
+- Additional cluster summary levels and reporting refinements
