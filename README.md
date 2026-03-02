@@ -18,7 +18,6 @@ The pipeline is designed to be:
 - ✅ **Fail-fast** — validation mode catches problems early
 - ✅ **Safe to test** — dry-run mode prints commands without executing
 
----
 
 ## Pipeline overview
 
@@ -48,7 +47,6 @@ The pipeline performs the following steps:
 7. **Generate checksums & manifest**
    - For reproducibility and auditing
 
----
 
 ## Repository structure
 ```text
