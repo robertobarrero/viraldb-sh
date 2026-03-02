@@ -116,20 +116,23 @@ Note - the pipeline automatically detects:
 
 Outputs and logs are created in the run directory.
 
-### Validation mode (recommended first step prior running the pipeline)
+#### Validation mode (recommended first step prior running the pipeline)
 - Validation checks:
+```bash
   • Required executables on PATH
   • Writable output directories
   • Presence of all required input files
   • Presence of pipeline scripts
-
-### Run validation without executing the pipeline:
+```
+#### Run validation without executing the pipeline:
+```bash
 bash launch_viralDB_download.sh --validate
-
+```
 ### Dry-run (safe preview)
 - Dry-run mode prints all commands without executing them:
+```bash
 bash launch_viralDB_download.sh --dry-run
-
+```
 - This is ideal for:
   • Reviewing commands
   • Debugging paths
