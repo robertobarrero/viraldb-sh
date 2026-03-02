@@ -97,15 +97,15 @@ PHASE2_POLICY="majority"
 REFSEQ_MIN_LEN_FRAC=0.90
 ```
 ## Running the pipeline
-- Local / interactive HPC session
+#### Local / interactive HPC session
 ```bash
 bash launch_viralDB_download.sh
 ```
-### PBS Pro
+#### PBS Pro
 ```bash
 qsub launch_viralDB_download.pbs
 ```
-### SLURM
+#### SLURM
 ```bash
 sbatch launch_viralDB_download.slurm
 ```
