@@ -1,72 +1,87 @@
 # viraldb-sh - A pipeline for building a harmonized plant viral database
 
-viraldb-sh is a lightweight, Bash-based pipeline for building a curated viral database
-from NCBI Virus (GenBank + RefSeq) and ViroidDB, with taxonomy enrichment, sequence 
+**viraldb-sh v0.1** is a lightweight, Bash-based pipeline for building a curated viral database
+from **NCBI Virus (GenBank + RefSeq)** and **ViroidDB**, with taxonomy enrichment, sequence 
 filtering, clustering, and representative selection.
 
+The pipeline is intentionally lightweight and transparent, designed for HPC environments and 
+long-term maintainability.
+
+---
+
+## Key features
+
 The pipeline is designed to be:
-  •	✅ Simple & transparent (pure Bash calling Python tools)
-  •	✅ HPC-safe (PBS Pro, SLURM, or local execution)
-  •	✅ Reproducible (version stamping, manifests, checksums)
-  •	✅ Fail-fast (validation mode)
-  •	✅ Safe to test (dry-run mode)
+- ✅ **Simple & transparent** — pure Bash orchestrating Python tools
+- ✅ **HPC-safe** — runs on PBS Pro, SLURM, or locally
+- ✅ **Reproducible** — version stamping, manifests, checksums
+- ✅ **Fail-fast** — validation mode catches problems early
+- ✅ **Safe to test** — dry-run mode prints commands without executing
+
+---
 
 ## Pipeline overview
 
 The pipeline performs the following steps:
 
-1. Download viral sequences
-   • NCBI Virus (GenBank + RefSeq)
-   • ViroidDB
+1. **Download viral sequences**
+   - NCBI Virus (GenBank + RefSeq)
+   - ViroidDB
 
-2. Enrich FASTA headers with taxonomic lineage
+2. **Enrich FASTA headers**
+   - Adds taxonomic linease from NCBI Datasets JSONL
 
-3. Merge, filter, and sort sequences
-   • Remove short sequences
-   • Filter sequences with excessive Ns
+3. **Merge, filter, and sort sequences per species**
+   - Remove short sequences (e.g. length < 200 bp)
+   - Filter sequences with excessive Ns (e.g., Ns fraction > 3% of bases in sequence)
 
-4. Cluster sequences (CD-HIT-EST)
-   • Identity thresholds: 1.0, 0.995, 0.99
+4. **Cluster sequences (CD-HIT-EST)**
+   - Identity thresholds: `1.0`, `0.995`, `0.99`
 
-5. Summarise clusters
-   • Assess mixed-species clustering
+5. **Summarise clusters**
+   - Detect and report mixed-species clusters
 
-6. Phase 2 representative selection
-   • Policy-based representative selection
+6. **Phase 2 representative selection**
+   - Policy-based representative selection
+   - Criteria: majority seqs in cluster's annotation -> RefSeq curated -> complete genome / segment -> strain -> longest 
 
-7. Generate checksums & manifest
-   • For reproducibility and auditing
+7. **Generate checksums & manifest**
+   - For reproducibility and auditing
 
-## Directory structure
-```bash
+---
+
+## Repository structure
+```text
 viraldb-sh/
-├── bin/                     # Python scripts
-├── lib/                     # Shared Bash utilities
+├── bin/                        # Python scripts
+├── lib/                        # Shared Bash utilities
 ├── envs/
-│   └── viraldb.yaml         # Conda environment definition
-├── config_viralDB.txt       # User-editable configuration
+│   └── viraldb.yaml            # Conda environment definition
+├── config_viralDB.txt          # User-editable configuration
 ├── launch_viralDB_download.sh
 ├── launch_viralDB_download.pbs
 ├── launch_viralDB_download.slurm
 └── README.md
 ```
 ## Requirements
-Software:
-  • Bash ≥ 4
-  • Conda / Mamba
-  • Python ≥ 3.9
-  • NCBI Datasets CLI (datasets)
-  • CD-HIT (cd-hit-est)
+
+#### Software:
+- Bash ≥ 4
+- Conda / Mamba
+- Python ≥ 3.9
+- NCBI Datasets CLI (datasets)
+- CD-HIT (cd-hit-est)
 
 All runtime tools are expected to be available via a Conda environment.
 
 ## Installation
-1. Clone or download the pipeline
+
+1. **Clone the repository**
 ```bash
-git clone <repo-url> viraldb-sh
+git clone https://github.com/robertobarrero/viraldb-sh.git
 cd viraldb-sh
 ```
-2. Create the Conda environment
+2. **Create the Conda environment**
 ```bash
 conda env create -f envs/viraldb.yaml
 ```
@@ -75,9 +90,11 @@ or (recommended)
 mamba env create -f envs/viraldb.yaml
 ```
 ## Configuration
-- Edit the main configuration file: config_viralDB.txt
-
-- Key variables:
+Edit the main configuration file
+```bash
+config_viralDB.txt
+```
+### Key variables:
 ```bash
 PIPELINE_NAME="viraldb-sh"
 PIPELINE_VERSION="0.1"
@@ -109,66 +126,87 @@ qsub launch_viralDB_download.pbs
 ```bash
 sbatch launch_viralDB_download.slurm
 ```
-Note - the pipeline automatically detects:
-  • PBS_O_WORKDIR
-  • SLURM_SUBMIT_DIR
-  • or defaults to the current directory
+The pipeline automatically detects:
+- PBS_O_WORKDIR
+- SLURM_SUBMIT_DIR
+- or defaults to the current directory
 
-Outputs and logs are created in the run directory.
+All outputs and logs are created in the **run directory**.
 
-#### Validation mode (recommended first step prior running the pipeline)
-- Validation checks:
-```bash
-  • Required executables on PATH
-  • Writable output directories
-  • Presence of all required input files
-  • Presence of pipeline scripts
-```
-#### Run validation without executing the pipeline:
+## Validation mode (recommended first step prior running the pipeline)
+Validation checks:
+- Required executables on PATH
+- Writable output directories
+- Presence of all required input files
+- Presence of pipeline scripts
+
+Run validation only:
 ```bash
 bash launch_viralDB_download.sh --validate
 ```
-### Dry-run (safe preview)
-- Dry-run mode prints all commands without executing them:
+## Dry-run (safe preview)
+Dry-run mode prints all commands without executing them:
 ```bash
 bash launch_viralDB_download.sh --dry-run
 ```
-- This is ideal for:
-  • Reviewing commands
-  • Debugging paths
-  • Testing configuration changes
+Useful for:
+- Reviewing commands
+- Debugging paths
+- Testing configuration changes
 
-### Logging
-- Logs are writtenn to:
+## Logging
+Logs are writtenn to:
 ```bash
 logs/viraldb_<DATE>.log
 ```
-- Note:
-  • Logs are not written during dry-run (clean output).
-  • Each run has a unique timestamped log.
+Notes:
+- Logs are not written during dry-run (clean output).
+- Each run has a unique timestamped log.
 
-### Reproducibility and auditing
-- When not in dry-run mode, the pipeline automatically:
-  • Creates a run manifest
-  • Records:
-    • Pipeline version
-    • Tool versions
-    • Configuration snapshot
-    • Generates checksums (sha256) for key outputs
+## Reproducibility and auditing
+When **not** in dry-run mode, the pipeline automatically:
+- Creates a run manifest
+- Records:
+  • Pipeline version
+  • Tool versions
+  • Configuration snapshot
+  • Generates checksums (sha256) for key outputs
 
 - This enables:
-  • Exact reruns (resume from last successful step)
   • Provenance tracking
   • Long-term reproducibility
+  • Exact re-runs using the same configuration
 
+## Supported runtime modes
 ```bash
-FEATURE				        DEFAULT
---dry-run			          off
---validate		          off
-Manifest + checksums		auto
+FEATURE                     DEFAULT
+--dry-run                   off
+--validate                  off
+Manifest + checksums        automatic
 ```
-### Output example
-```bash
+
+## Phase 2 representative selection 
+Representative sequences are selected per CD-HIT cluster (e.g., identity >=99.5%) using a policy-driven, hierarchical decision process using five criteria:
+1.	**Majority annotation**
+	-	Determine the dominant taxonomic annotation within the cluster
+	-	Representatives are chosen from the majority group
+2.	**Reference database preference**
+	-	Prefer RefSeq-curated sequences over GenBank-only records
+3.	**Sequence completeness**
+	-	Prefer complete genomes or complete segments over partial sequences
+4.	**Sequence type specificity**
+	-	Prefer strain-level or isolate-level annotations when available
+5.	**Length-based tie-breaker**
+	-	If multiple candidates remain, select the longest sequence
+
+This ensures representatives are:
+-	Taxonomically consistent
+-	Curated where possible
+-	Biologically complete
+-	Maximally informative
+
+## Example output
+```text
 20260302_viralDB/
 ├── ncbi_viral__ALL_FAMILIES.fasta
 ├── ncbi_viral__ALL_FAMILIES__taxonomy.fasta
@@ -183,17 +221,17 @@ Manifest + checksums		auto
 ├── representatives__all__c0.990000.fasta
 └── manifest/
 ```
-### Pipeline design and deployment
-- This pipeline intentionally avoids heavy workflow engines to:
-  • Reduce cognitive overhead
-  • Keep execution transparent
-  • Match HPC usage patterns
-  • Enable easy debugging and maintenance
+### Pipeline philosophy
+This pipeline intentionally avoids heavy workflow engines to:
+- Reduce cognitive overhead
+- Keep execution transparent
+- Match HPC usage patterns
+- Enable easy debugging and maintenance
 
-- It can be run:
-  • Interactively
-  • As a batch job
-  • Inside larger meta-workflows if needed
+It can be run:
+- Interactively
+- As a batch job
+- Inside larger meta-workflows if needed
 
 ### Author
 Roberto A. Barrero
