@@ -38,6 +38,7 @@ The pipeline performs the following steps:
    • For reproducibility and auditing
 
 ## Directory structure
+```bash
 viraldb-sh/
 ├── bin/                     # Python scripts
 ├── lib/                     # Shared Bash utilities
@@ -48,7 +49,7 @@ viraldb-sh/
 ├── launch_viralDB_download.pbs
 ├── launch_viralDB_download.slurm
 └── README.md
-
+```
 ## Requirements
 Software:
   • Bash ≥ 4
@@ -61,21 +62,23 @@ All runtime tools are expected to be available via a Conda environment.
 
 ## Installation
 1. Clone or download the pipeline
-
+```bash
 git clone <repo-url> viraldb-sh
 cd viraldb-sh
-
+```
 2. Create the Conda environment
-
+```bash
 conda env create -f envs/viraldb.yaml
-
+```
 or (recommended)
+```bash
 mamba env create -f envs/viraldb.yaml
-
+```
 ## Configuration
 - Edit the main configuration file: config_viralDB.txt
 
 - Key variables:
+```bash
 PIPELINE_NAME="viraldb-sh"
 PIPELINE_VERSION="0.1"
 
@@ -92,19 +95,21 @@ MAX_NS_FRACTION=3.0
 CDHIT_MEM_MB=8192        # Memory passed to cd-hit-est (-M, in MB)
 PHASE2_POLICY="majority"
 REFSEQ_MIN_LEN_FRAC=0.90
-
+```
 ## Running the pipeline
 - Local / interactive HPC session
+```bash
 bash launch_viralDB_download.sh
-
+```
 ### PBS Pro
+```bash
 qsub launch_viralDB_download.pbs
-
+```
 ### SLURM
+```bash
 sbatch launch_viralDB_download.slurm
-
-note:
-The pipeline automatically detects:
+```
+Note - the pipeline automatically detects:
   • PBS_O_WORKDIR
   • SLURM_SUBMIT_DIR
   • or defaults to the current directory
@@ -131,11 +136,11 @@ bash launch_viralDB_download.sh --dry-run
   • Testing configuration changes
 
 ### Logging
-
 - Logs are writtenn to:
+```bash
 logs/viraldb_<DATE>.log
-
-- note:
+```
+- Note:
   • Logs are not written during dry-run (clean output).
   • Each run has a unique timestamped log.
 
@@ -153,12 +158,14 @@ logs/viraldb_<DATE>.log
   • Provenance tracking
   • Long-term reproducibility
 
-Feature				Default
---dry-run			off
---validate			off
+```bash
+FEATURE				        DEFAULT
+--dry-run			          off
+--validate		          off
 Manifest + checksums		auto
-
+```
 ### Output example
+```bash
 20260302_viralDB/
 ├── ncbi_viral__ALL_FAMILIES.fasta
 ├── ncbi_viral__ALL_FAMILIES__taxonomy.fasta
@@ -172,7 +179,7 @@ Manifest + checksums		auto
 ├── representatives__all__c0.995000.fasta
 ├── representatives__all__c0.990000.fasta
 └── manifest/
-
+```
 ### Why Bash (and not a worflow engine)?
 - This pipeline intentionally avoids heavy workflow engines to:
   • Reduce cognitive overhead
