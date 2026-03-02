@@ -1,0 +1,60 @@
+#🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸#
+#  viralDB -  User defined variables     
+#🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸🔸#
+
+# Script: config_viraldb.txt
+
+#------------------------------------------------------------
+# ⚠️ ⚠️ ⚠️ Check the information for VARIABLES noted with ⚠️ ⚠️ ⚠️
+#------------------------------------------------------------
+
+# -------------------------
+# viraldb-sh configuration
+# -------------------------
+
+# ⚠️ ⚠️ ⚠️  NOTE: prior downloading viralDB create a conda environment containing all the tools needed by viralDB.
+# ⚠️ ⚠️ ⚠️  use envs/viralDB.yaml file to create the conda env (e.g., conda create -f envs/viralDB.yaml) 
+CONDAENV="viralDB"
+
+# ⚠️ ⚠️ ⚠️  Location of the downloaded viraldb-sh pipeline 
+PIPELINE_DIR="/path/to/downloaded/viraldb-sh"
+
+# Pipeline labels (for stamping)
+PIPELINE_NAME="viraldb-sh"
+PIPELINE_VERSION="0.1"
+
+# Location of pipeline scripts (paths)
+BIN_DIR="${PIPELINE_DIR}/bin"
+
+# Optional: where logs go
+LOGDIR="logs"
+
+# Output naming
+DATE="$(date +%Y%m%d)"          # ⚠️ ⚠️ ⚠️  or set fixed: 20260227 if want to resume on a different day, week, etc.
+OUTDIR="${DATE}_viralDB"
+PREFIX="${DATE}_viralDB"
+
+# Compute resources
+CPUS=4
+CDHIT_MEM_MB=8000                   # 0 = unlimited for cd-hit-est wrapper. Note units in MB.
+
+# ⚠️ ⚠️ ⚠️  Viral families - A list of plant viral families is included in the BIN_DIR folder. Modify path if using a different file.
+# ⚠️ ⚠️ ⚠️  the file contains one family name per row
+VIRAL_FAMILIES_TSV="${BIN_DIR}/plant_virus_families.tsv"
+
+# Download tool settings
+DATASETS_RETRIES=3
+SLEEP_BETWEEN_DOWNLOADS=10
+
+# Filter settings
+MIN_LEN=200
+MAX_NS_FRACTION=3.0
+MAX_NS=0                             # 0 disables absolute max Ns
+
+# Clustering settings
+IDENTITIES="1.0 0.995 0.99"
+
+# Phase 2 settings
+PHASE2_POLICY="majority"
+REFSEQ_MIN_LEN_FRAC=0.90
+

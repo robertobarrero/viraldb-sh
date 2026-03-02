@@ -1,0 +1,14 @@
+name: viraldb
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - ncbi-datasets-cli
+  - cd-hit
+  - seqkit
+  - pandas
+  - requests
+  - tqdm

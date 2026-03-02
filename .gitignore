@@ -1,0 +1,31 @@
+# Outputs / run dirs
+*_viralDB/
+run*/
+logs/
+manifest/
+*.log
+
+# Inputs
+config_viralDB.txt
+
+# Large data / databases
+*.fasta
+*.fa
+*.fna
+*.fastq
+*.fastq.gz
+*.jsonl
+*.clstr
+reps_all/
+ncbi_dataset/
+
+# Conda / env caches
+.conda/
+.venv/
+__pycache__/
+*.pyc
+
+# OS/editor
+.DS_Store
+.vscode/
+.vim

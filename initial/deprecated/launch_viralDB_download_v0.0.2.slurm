@@ -1,0 +1,246 @@
+#!/bin/bash -l
+#SBATCH --job-name=fetch_viralDB
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=8G
+#SBATCH --time=24:00:00
+#SBATCH --output=fetch_viralDB.%j.out
+#SBATCH --error=fetch_viralDB.%j.err
+
+# Author: Roberto A. Barrero, eResearch, Research Infrastructure, Academic Division, QUT
+# Date: 2026-03-02
+# This version runs in a HPC cluster using SLURM scheduler (Not tested - modify SBATCH lines as appropriate)
+# See README.md for details on how to run this script
+
+set -euo pipefail
+
+# -----------------------------
+# Pipeline installation dir (STATIC)
+# -----------------------------
+PIPELINE_DIR="/work/eresearch_bio/curated_VirDB/workflows/viraldb-sh/v0.1"
+
+# -----------------------------
+# Determine run directory (PBS / SLURM / local)
+# -----------------------------
+if [[ -n "${PBS_O_WORKDIR:-}" ]]; then
+    RUN_DIR="$PBS_O_WORKDIR"
+elif [[ -n "${SLURM_SUBMIT_DIR:-}" ]]; then
+    RUN_DIR="$SLURM_SUBMIT_DIR"
+else
+    RUN_DIR="$(pwd)"
+fi
+
+cd "$RUN_DIR" || exit 1
+LOGDIR="${RUN_DIR}/logs"
+
+# -----------------------------
+# Load config + utils
+# -----------------------------
+CONFIG_FILE="${PIPELINE_DIR}/config_viralDB.txt"
+source "${CONFIG_FILE}"
+source "${PIPELINE_DIR}/lib/pipeline_utils.sh"
+
+parse_modes "$@"
+
+# -----------------------------
+# Setup log dir (in run folder)
+# -----------------------------
+mkdir -p "${LOGDIR}"
+LOGFILE="${LOGDIR}/viraldb_${DATE}.log"
+
+# If dry-run, don't tee (keep clean). Otherwise log everything.
+if [[ "${DRY_RUN}" -eq 0 ]]; then
+  exec > >(tee -i "${LOGFILE}")
+  exec 2>&1
+fi
+
+log "PIPELINE: ${PIPELINE_NAME} v${PIPELINE_VERSION}"
+log "OUTDIR   : ${OUTDIR}"
+log "DRY_RUN  : ${DRY_RUN}"
+log "VALIDATE : ${VALIDATE_ONLY}"
+
+# activate conda environment with necessary tools
+source ~/.bashrc
+conda activate "$CONDAENV"
+
+# -----------------------------
+# Validation (fast, fail early)
+# -----------------------------
+log "Validating environment and inputs..."
+
+require_exec python3
+require_exec datasets
+require_exec cd-hit-est
+
+require_file "${VIRAL_FAMILIES_TSV}"
+
+require_dir_writable "${OUTDIR}"
+require_dir_writable "${OUTDIR}/${LOGDIR}"
+
+# Validate python scripts exist
+require_file "${BIN_DIR}/download_viral_sequences_v0.9.py"
+require_file "${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_v0.2.py"
+require_file "${BIN_DIR}/sort_fasta_by_species_v1.5.py"
+require_file "${BIN_DIR}/cluster_and_select_reps_v0.2.py"
+require_file "${BIN_DIR}/summarise_cdhit_clstr_with_fasta.py"
+require_file "${BIN_DIR}/phase2_select_reps_from_cdhit_v0.3.py"
+
+log "Validation OK."
+
+if [[ "${VALIDATE_ONLY}" -eq 1 ]]; then
+  log "Validation-only mode requested; exiting."
+  exit 0
+fi
+
+# -----------------------------
+# Manifest
+# -----------------------------
+if [[ "${DRY_RUN}" -eq 0 ]]; then
+  init_manifest
+  record_versions
+fi
+
+# -----------------------------
+# STEP 1: Download
+# -----------------------------
+log "🔹🔹🔹 Step 1: download NCBI viral + ViroidDB"
+run_cmd "python3 ${BIN_DIR}/download_viral_sequences_v0.9.py \
+  --ncbi_viral \
+  --viroid_db \
+  --viral_families ${VIRAL_FAMILIES_TSV} \
+  --merge_reports \
+  --datasets_retries 3 \
+  --sleep_between_downloads 10 \
+  -o ${OUTDIR} \
+  --verbose"
+
+# -----------------------------
+# STEP 2: Enrich NCBI FASTA
+# -----------------------------
+log "🔹🔹🔹 Step 2: enrich NCBI viral headers"
+run_cmd "python3 ${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_v0.2.py \
+  --fasta ${OUTDIR}/ncbi_viral__ALL_FAMILIES.fasta \
+  --datasets_report ${OUTDIR}/ncbi_viral__ALL_FAMILIES.data_report.jsonl \
+  --out_fasta ${OUTDIR}/ncbi_viral__ALL_FAMILIES__taxonomy.fasta \
+  --out_metadata ${OUTDIR}/ncbi_viral__ALL_FAMILIES__taxonomy_metadata.tsv \
+  --source NCBI_Virus \
+  --status NA \
+  --prev_db NA"
+
+# -----------------------------
+# STEP 3: Enrich viroids
+# -----------------------------
+log "🔹🔹🔹 Step 3: enrich unclassified viroids headers"
+run_cmd "python3 ${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_v0.2.py \
+  --fasta ${OUTDIR}/unclassified.fasta \
+  --datasets_report ${OUTDIR}/ncbi_viral__ALL_FAMILIES.data_report.jsonl \
+  --source ViroidDB \
+  --status NA \
+  --prev_db NA \
+  --out_fasta ${OUTDIR}/unclassified_viroids_taxonomy.fasta \
+  --out_metadata ${OUTDIR}/unclassified_viroids_taxonomy_metadata.tsv"
+
+# -----------------------------
+# STEP 4: Merge + filter + sort
+# -----------------------------
+log "🔹🔹🔹 Step 4: merge + filter + sort"
+run_cmd "python3 ${BIN_DIR}/sort_fasta_by_species_v1.5.py \
+  --fasta ${OUTDIR}/ncbi_viral__ALL_FAMILIES__taxonomy.fasta \
+  --fasta2 ${OUTDIR}/unclassified_viroids_taxonomy.fasta \
+  --min_len ${MIN_LEN} \
+  --max_Ns_fraction ${MAX_NS_FRACTION} \
+  --out_merged_fasta ${OUTDIR}/ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy.fasta \
+  --out_sorted_fasta ${OUTDIR}/ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy_filtered.fasta"
+
+# -----------------------------
+# STEP 5: Cluster
+# -----------------------------
+log "🔹🔹🔹 Step 5: cluster all sequences (select Phase 1 representatives)"
+
+# cd-hit-est -M expects MB; config provides MB and it will replace the memory assigned below
+: "${CDHIT_MEM_MB:=0}"   # 0 = unlimited (matches cd-hit-est behavior)
+
+run_cmd "python3 ${BIN_DIR}/cluster_and_select_reps_v0.2.py \
+  --fasta ${OUTDIR}/ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy_filtered.fasta \
+  --outdir ${OUTDIR}/reps_all \
+  --group all \
+  --identity 1.0 0.995 0.99 \
+  --threads ${CPUS} \
+  --memory ${CDHIT_MEM_MB} \
+  --verbose"
+
+# -----------------------------
+# STEP 6: Summarise clusters (c1000, c995, c990)
+# -----------------------------
+log "🔹🔹🔹 Step 6: summarise clusters (c1000, c995, c990)"
+
+# Define the identity thresholds you clustered with
+IDENTITIES=("1.0" "0.995" "0.99")
+
+for ID in "${IDENTITIES[@]}"; do
+  # Format exactly as the clustering wrapper writes it: cX.XXXXXX
+  CDIR=$(printf "c%.6f" "${ID}")
+
+  # Map to your human label used in filenames
+  if [[ "${ID}" == "1.0" ]]; then
+    LABEL="c1000"
+  elif [[ "${ID}" == "0.995" ]]; then
+    LABEL="c995"
+  elif [[ "${ID}" == "0.99" ]]; then
+    LABEL="c990"
+  else
+    # fallback (shouldn’t happen with your defaults)
+    LABEL="${CDIR}"
+  fi
+
+  CLSTR_FILE="${OUTDIR}/reps_all/all_groups/ALL/${CDIR}/reps.fasta.clstr"
+
+  # Skip gracefully if a given clstr is missing (HPC-safe)
+  if [[ ! -s "${CLSTR_FILE}" ]]; then
+    log "[WARN] Missing .clstr for ${CDIR}: ${CLSTR_FILE} (skipping)"
+    continue
+  fi
+
+  log "🔹🔹🔹 Summarising ${LABEL} using ${CLSTR_FILE}"
+
+  run_cmd "python3 ${BIN_DIR}/summarise_cdhit_clstr_with_fasta.py \
+    --clstr ${CLSTR_FILE} \
+    --fasta ${OUTDIR}/ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy_filtered.fasta \
+    --identity_label ${LABEL} \
+    --group ALL \
+    --out_summary ${OUTDIR}/clusters_summary_${LABEL}.tsv \
+    --out_mixed ${OUTDIR}/clusters_mixed_species_members_${LABEL}.tsv \
+    --out_flat ${OUTDIR}/clusters_${LABEL}.tsv"
+done
+
+# -----------------------------
+# STEP 7: Phase 2 reps selection
+# -----------------------------
+log "🔹🔹🔹 Step 7: phase2 representative selection"
+run_cmd "python3 ${BIN_DIR}/phase2_select_reps_from_cdhit_v0.3.py \
+  --reps_all_dir ${OUTDIR}/reps_all \
+  --policy ${PHASE2_POLICY} \
+  --refseq_min_len_frac ${REFSEQ_MIN_LEN_FRAC} \
+  --prefix ${DATE}_viralDB \
+  --verbose"
+
+# -----------------------------
+# Checksums of key outputs + finish
+# -----------------------------
+if [[ "${DRY_RUN}" -eq 0 ]]; then
+  checksum_files \
+    "${OUTDIR}/ncbi_viral__ALL_FAMILIES.fasta" \
+    "${OUTDIR}/ncbi_viral__ALL_FAMILIES.data_report.jsonl" \
+    "${OUTDIR}/unclassified.fasta" \
+    "${OUTDIR}/ncbi_viral__ALL_FAMILIES__taxonomy.fasta" \
+    "${OUTDIR}/unclassified_viroids_taxonomy.fasta" \
+    "${OUTDIR}/ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy_filtered.fasta" \
+    "${OUTDIR}/clusters_summary_c1000.tsv" \
+    "${OUTDIR}/clusters_mixed_species_members_c1000.tsv" \
+    "${OUTDIR}/representatives__all__c1.000000.fasta" \
+    "${OUTDIR}/representatives__all__c0.995000.fasta" \
+    "${OUTDIR}/representatives__all__c0.990000.fasta"
+
+  finish_manifest
+fi
+
+log "✅ Done."

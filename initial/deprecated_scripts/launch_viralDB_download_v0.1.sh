@@ -1,0 +1,321 @@
+#!/usr/bin/env bash
+# Author: Roberto A. Barrero, eResearch, Research Infrastructure, Academic Division, QUT
+# Date: 2026-03-02
+# viraldb-sh v0.1 launcher (local / interactive / PBS / SLURM)
+# Supports: --validate, --dry-run, --resume (default), --no-resume
+
+set -euo pipefail
+
+# -----------------------------
+# Pipeline installation dir (STATIC)
+# -----------------------------
+PIPELINE_DIR="/work/eresearch_bio/curated_VirDB/workflows/viraldb-sh/v0.1"
+
+# -----------------------------
+# Determine run directory (PBS / SLURM / local)
+# -----------------------------
+if [[ -n "${PBS_O_WORKDIR:-}" ]]; then
+  RUN_DIR="$PBS_O_WORKDIR"
+elif [[ -n "${SLURM_SUBMIT_DIR:-}" ]]; then
+  RUN_DIR="$SLURM_SUBMIT_DIR"
+else
+  RUN_DIR="$(pwd)"
+fi
+
+cd "$RUN_DIR" || exit 1
+LOGDIR="${RUN_DIR}/logs"
+
+# -----------------------------
+# Load config + utils
+# -----------------------------
+CONFIG_FILE="${PIPELINE_DIR}/config_viralDB.txt"
+source "${CONFIG_FILE}"
+source "${PIPELINE_DIR}/lib/pipeline_utils.sh"
+
+# Parse CLI flags (sets DRY_RUN / VALIDATE_ONLY / RESUME)
+parse_modes "$@"
+: "${RESUME:=1}"
+
+# -----------------------------
+# Setup log dir (in run folder)
+# -----------------------------
+mkdir -p "${LOGDIR}"
+LOGFILE="${LOGDIR}/viraldb_${DATE}.log"
+
+# If dry-run, don't tee (keep clean). Otherwise log everything.
+if [[ "${DRY_RUN}" -eq 0 ]]; then
+  exec > >(tee -i "${LOGFILE}")
+  exec 2>&1
+fi
+
+log "PIPELINE: ${PIPELINE_NAME} v${PIPELINE_VERSION}"
+log "OUTDIR   : ${OUTDIR}"
+log "DRY_RUN  : ${DRY_RUN}"
+log "VALIDATE : ${VALIDATE_ONLY}"
+log "RESUME   : ${RESUME}"
+
+# -----------------------------
+# Activate conda environment with necessary tools
+# -----------------------------
+# (HPC-safe: assumes you have conda set up in ~/.bashrc)
+source ~/.bashrc
+conda activate "$CONDAENV"
+
+# -----------------------------
+# Validation (fast, fail early)
+# -----------------------------
+log "Validating environment and inputs..."
+
+require_exec python3
+require_exec datasets
+require_exec cd-hit-est
+
+require_file "${VIRAL_FAMILIES_TSV}"
+
+# Ensure run/log directories writable
+require_dir_writable "${LOGDIR}"
+require_dir_writable "${OUTDIR}"
+
+# Ensure manifest/steps dir exists for sentinels
+require_dir_writable "${OUTDIR}/manifest/steps"
+
+# Validate python scripts exist
+require_file "${BIN_DIR}/download_viral_sequences_v0.9.py"
+require_file "${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_v0.2.py"
+require_file "${BIN_DIR}/sort_fasta_by_species_v1.5.py"
+require_file "${BIN_DIR}/cluster_and_select_reps_v0.2.py"
+require_file "${BIN_DIR}/summarise_cdhit_clstr_with_fasta.py"
+require_file "${BIN_DIR}/phase2_select_reps_from_cdhit_v0.3.py"
+
+log "Validation OK."
+
+if [[ "${VALIDATE_ONLY}" -eq 1 ]]; then
+  log "Validation-only mode requested; exiting."
+  exit 0
+fi
+
+# -----------------------------
+# Manifest (only for real runs)
+# -----------------------------
+if [[ "${DRY_RUN}" -eq 0 ]]; then
+  init_manifest
+  record_versions
+fi
+
+# Convenience: sentinel directory
+SENTDIR="${OUTDIR}/manifest/steps"
+
+# cd-hit-est -M expects MB; config provides MB
+: "${CDHIT_MEM_MB:=0}"   # 0 = unlimited (matches cd-hit-est behavior)
+
+# Common inputs
+NCBI_FASTA="${OUTDIR}/ncbi_viral__ALL_FAMILIES.fasta"
+NCBI_JSONL="${OUTDIR}/ncbi_viral__ALL_FAMILIES.data_report.jsonl"
+UNCLASS_FASTA="${OUTDIR}/unclassified.fasta"
+
+NCBI_TAX_FASTA="${OUTDIR}/ncbi_viral__ALL_FAMILIES__taxonomy.fasta"
+NCBI_TAX_META="${OUTDIR}/ncbi_viral__ALL_FAMILIES__taxonomy_metadata.tsv"
+
+VIROID_TAX_FASTA="${OUTDIR}/unclassified_viroids_taxonomy.fasta"
+VIROID_TAX_META="${OUTDIR}/unclassified_viroids_taxonomy_metadata.tsv"
+
+MERGED_FASTA="${OUTDIR}/ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy.fasta"
+FILTERED_FASTA="${OUTDIR}/ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy_filtered.fasta"
+
+REPS_DIR="${OUTDIR}/reps_all"
+
+# -----------------------------
+# STEP 1: Download
+# -----------------------------
+log "🔹🔹🔹 Step 1: download NCBI viral + ViroidDB"
+
+run_step "Step1_download" \
+  "${SENTDIR}/step01_download.done" \
+  "${NCBI_FASTA}" "${NCBI_JSONL}" "${UNCLASS_FASTA}" \
+  -- \
+  run_cmd "python3 ${BIN_DIR}/download_viral_sequences_v0.9.py \
+    --ncbi_viral \
+    --viroid_db \
+    --viral_families ${VIRAL_FAMILIES_TSV} \
+    --merge_reports \
+    --datasets_retries 3 \
+    --sleep_between_downloads 10 \
+    -o ${OUTDIR} \
+    --verbose"
+
+# -----------------------------
+# STEP 2: Enrich NCBI FASTA
+# -----------------------------
+log "🔹🔹🔹 Step 2: enrich NCBI viral headers"
+
+run_step "Step2_enrich_ncbi" \
+  "${SENTDIR}/step02_enrich_ncbi.done" \
+  "${NCBI_TAX_FASTA}" "${NCBI_TAX_META}" \
+  -- \
+  run_cmd "python3 ${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_v0.2.py \
+    --fasta ${NCBI_FASTA} \
+    --datasets_report ${NCBI_JSONL} \
+    --out_fasta ${NCBI_TAX_FASTA} \
+    --out_metadata ${NCBI_TAX_META} \
+    --source NCBI_Virus \
+    --status NA \
+    --prev_db NA"
+
+# -----------------------------
+# STEP 3: Enrich viroids
+# -----------------------------
+log "🔹🔹🔹 Step 3: enrich unclassified viroids headers"
+
+run_step "Step3_enrich_viroids" \
+  "${SENTDIR}/step03_enrich_viroids.done" \
+  "${VIROID_TAX_FASTA}" "${VIROID_TAX_META}" \
+  -- \
+  run_cmd "python3 ${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_v0.2.py \
+    --fasta ${UNCLASS_FASTA} \
+    --datasets_report ${NCBI_JSONL} \
+    --source ViroidDB \
+    --status NA \
+    --prev_db NA \
+    --out_fasta ${VIROID_TAX_FASTA} \
+    --out_metadata ${VIROID_TAX_META}"
+
+# -----------------------------
+# STEP 4: Merge + filter + sort
+# -----------------------------
+log "🔹🔹🔹 Step 4: merge + filter + sort"
+
+run_step "Step4_sort_filter" \
+  "${SENTDIR}/step04_sort_filter.done" \
+  "${MERGED_FASTA}" "${FILTERED_FASTA}" \
+  -- \
+  run_cmd "python3 ${BIN_DIR}/sort_fasta_by_species_v1.5.py \
+    --fasta ${NCBI_TAX_FASTA} \
+    --fasta2 ${VIROID_TAX_FASTA} \
+    --min_len ${MIN_LEN} \
+    --max_Ns_fraction ${MAX_NS_FRACTION} \
+    --out_merged_fasta ${MERGED_FASTA} \
+    --out_sorted_fasta ${FILTERED_FASTA}"
+
+# -----------------------------
+# STEP 5: Cluster
+# -----------------------------
+log "🔹🔹🔹 Step 5: cluster all sequences (select Phase 1 representatives)"
+
+# Representative FASTAs produced by your wrapper (for default identities)
+REP_C1000="${OUTDIR}/representatives__all__c1.000000.fasta"
+REP_C0995="${OUTDIR}/representatives__all__c0.995000.fasta"
+REP_C0990="${OUTDIR}/representatives__all__c0.990000.fasta"
+
+run_step "Step5_cluster" \
+  "${SENTDIR}/step05_cluster.done" \
+  "${REPS_DIR}/summary.tsv" \
+  "${REP_C1000}" "${REP_C0995}" "${REP_C0990}" \
+  -- \
+  run_cmd "python3 ${BIN_DIR}/cluster_and_select_reps_v0.2.py \
+    --fasta ${FILTERED_FASTA} \
+    --outdir ${REPS_DIR} \
+    --group all \
+    --identity 1.0 0.995 0.99 \
+    --threads ${CPUS} \
+    --memory ${CDHIT_MEM_MB} \
+    --verbose"
+
+# -----------------------------
+# STEP 6: Summarise clusters (c1000, c995, c990)
+# -----------------------------
+log "🔹🔹🔹 Step 6: summarise clusters (c1000, c995, c990)"
+
+# We create a single sentinel for the whole summary batch, but require all summary outputs.
+SUM_C1000="${OUTDIR}/clusters_summary_c1000.tsv"
+MIX_C1000="${OUTDIR}/clusters_mixed_species_members_c1000.tsv"
+FLT_C1000="${OUTDIR}/clusters_c1000.tsv"
+
+SUM_C995="${OUTDIR}/clusters_summary_c995.tsv"
+MIX_C995="${OUTDIR}/clusters_mixed_species_members_c995.tsv"
+FLT_C995="${OUTDIR}/clusters_c995.tsv"
+
+SUM_C990="${OUTDIR}/clusters_summary_c990.tsv"
+MIX_C990="${OUTDIR}/clusters_mixed_species_members_c990.tsv"
+FLT_C990="${OUTDIR}/clusters_c990.tsv"
+
+run_step "Step6_summarise" \
+  "${SENTDIR}/step06_summarise.done" \
+  "${SUM_C1000}" "${MIX_C1000}" "${FLT_C1000}" \
+  "${SUM_C995}"  "${MIX_C995}"  "${FLT_C995}" \
+  "${SUM_C990}"  "${MIX_C990}"  "${FLT_C990}" \
+  -- \
+  bash -lc '
+    set -euo pipefail
+    IDENTITIES=("1.0" "0.995" "0.99")
+
+    for ID in "${IDENTITIES[@]}"; do
+      CDIR=$(printf "c%.6f" "${ID}")
+      if [[ "${ID}" == "1.0" ]]; then
+        LABEL="c1000"
+      elif [[ "${ID}" == "0.995" ]]; then
+        LABEL="c995"
+      elif [[ "${ID}" == "0.99" ]]; then
+        LABEL="c990"
+      else
+        LABEL="${CDIR}"
+      fi
+
+      CLSTR_FILE="'"${REPS_DIR}"'/all_groups/ALL/${CDIR}/reps.fasta.clstr"
+
+      if [[ ! -s "${CLSTR_FILE}" ]]; then
+        echo "[WARN] Missing .clstr for ${CDIR}: ${CLSTR_FILE} (skipping)"
+        continue
+      fi
+
+      echo "[INFO] Summarising ${LABEL} using ${CLSTR_FILE}"
+
+      python3 "'"${BIN_DIR}"'/summarise_cdhit_clstr_with_fasta.py" \
+        --clstr "${CLSTR_FILE}" \
+        --fasta "'"${FILTERED_FASTA}"'" \
+        --identity_label "${LABEL}" \
+        --group ALL \
+        --out_summary "'"${OUTDIR}"'/clusters_summary_${LABEL}.tsv" \
+        --out_mixed "'"${OUTDIR}"'/clusters_mixed_species_members_${LABEL}.tsv" \
+        --out_flat "'"${OUTDIR}"'/clusters_${LABEL}.tsv"
+    done
+  '
+
+# -----------------------------
+# STEP 7: Phase 2 reps selection
+# -----------------------------
+log "🔹🔹🔹 Step 7: phase2 representative selection"
+
+PHASE2_SUM="${OUTDIR}/${DATE}_viralDB_phase2_summary__all__c1.000000.tsv"
+PHASE2_REP="${OUTDIR}/${DATE}_viralDB_phase2_representatives__all__c1.000000.fasta"
+
+run_step "Step7_phase2" \
+  "${SENTDIR}/step07_phase2.done" \
+  "${PHASE2_SUM}" "${PHASE2_REP}" \
+  -- \
+  run_cmd "python3 ${BIN_DIR}/phase2_select_reps_from_cdhit_v0.3.py \
+    --reps_all_dir ${REPS_DIR} \
+    --policy ${PHASE2_POLICY} \
+    --refseq_min_len_frac ${REFSEQ_MIN_LEN_FRAC} \
+    --prefix ${DATE}_viralDB \
+    --verbose"
+
+# -----------------------------
+# Checksums of key outputs + finish
+# -----------------------------
+if [[ "${DRY_RUN}" -eq 0 ]]; then
+  checksum_files \
+    "${NCBI_FASTA}" \
+    "${NCBI_JSONL}" \
+    "${UNCLASS_FASTA}" \
+    "${NCBI_TAX_FASTA}" \
+    "${VIROID_TAX_FASTA}" \
+    "${FILTERED_FASTA}" \
+    "${SUM_C1000}" "${MIX_C1000}" \
+    "${SUM_C995}"  "${MIX_C995}" \
+    "${SUM_C990}"  "${MIX_C990}" \
+    "${REP_C1000}" "${REP_C0995}" "${REP_C0990}"
+
+  finish_manifest
+fi
+
+log "✅ Done."
