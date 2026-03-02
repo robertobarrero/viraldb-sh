@@ -1,6 +1,4 @@
-#
- viraldb-sh - A pipeline for building a harmonized plant viral database
--
+# viraldb-sh - A pipeline for building a harmonized plant viral database
 
 viraldb-sh is a lightweight, Bash-based pipeline for building a curated viral database
 from NCBI Virus (GenBank + RefSeq) and ViroidDB, with taxonomy enrichment, sequence 
@@ -13,9 +11,7 @@ The pipeline is designed to be:
   •	✅ Fail-fast (validation mode)
   •	✅ Safe to test (dry-run mode)
 
-#--------------------------------------------------------------------#
-Pipeline overview
-#--------------------------------------------------------------------#
+## Pipeline overview
 
 The pipeline performs the following steps:
 
@@ -41,10 +37,7 @@ The pipeline performs the following steps:
 7. Generate checksums & manifest
    • For reproducibility and auditing
 
-#--------------------------------------------------------------------#
-Directory structure
-#--------------------------------------------------------------------#
-
+## Directory structure
 viraldb-sh/
 ├── bin/                     # Python scripts
 ├── lib/                     # Shared Bash utilities
@@ -56,10 +49,7 @@ viraldb-sh/
 ├── launch_viralDB_download.slurm
 └── README.md
 
-#--------------------------------------------------------------------#
-Requirements
-#--------------------------------------------------------------------#
-
+## Requirements
 Software:
   • Bash ≥ 4
   • Conda / Mamba
@@ -69,10 +59,7 @@ Software:
 
 All runtime tools are expected to be available via a Conda environment.
 
-#--------------------------------------------------------------------#
-Installation
-#--------------------------------------------------------------------#
-
+## Installation
 1. Clone or download the pipeline
 
 git clone <repo-url> viraldb-sh
@@ -85,15 +72,10 @@ conda env create -f envs/viraldb.yaml
 or (recommended)
 mamba env create -f envs/viraldb.yaml
 
-#--------------------------------------------------------------------#
-Configuration
-#--------------------------------------------------------------------#
-### Edit the main configuration file
+## Configuration
+- Edit the main configuration file: config_viralDB.txt
 
-config_viralDB.txt
-
-### Key variables:
-
+- Key variables:
 PIPELINE_NAME="viraldb-sh"
 PIPELINE_VERSION="0.1"
 
@@ -111,20 +93,17 @@ CDHIT_MEM_MB=8192        # Memory passed to cd-hit-est (-M, in MB)
 PHASE2_POLICY="majority"
 REFSEQ_MIN_LEN_FRAC=0.90
 
-#--------------------------------------------------------------------#
-Running the pipeline
-#--------------------------------------------------------------------#
-
-# Local / interactive HPC session
+## Running the pipeline
+- Local / interactive HPC session
 bash launch_viralDB_download.sh
 
-# PBS Pro
+### PBS Pro
 qsub launch_viralDB_download.pbs
 
-# SLURM
+### SLURM
 sbatch launch_viralDB_download.slurm
 
-# note:
+note:
 The pipeline automatically detects:
   • PBS_O_WORKDIR
   • SLURM_SUBMIT_DIR
@@ -132,47 +111,36 @@ The pipeline automatically detects:
 
 Outputs and logs are created in the run directory.
 
-#--------------------------------------------------------------------#
-Validation mode (recommended first step prior running the pipeline)
-#--------------------------------------------------------------------#
-
-Validation checks:
+### Validation mode (recommended first step prior running the pipeline)
+- Validation checks:
   • Required executables on PATH
   • Writable output directories
   • Presence of all required input files
   • Presence of pipeline scripts
 
-# Run validation without executing the pipeline:
+### Run validation without executing the pipeline:
 bash launch_viralDB_download.sh --validate
 
-#--------------------------------------------------------------------#
-Dry-run (safe preview)
-#--------------------------------------------------------------------#
-
-# Dry-run mode prints all commands without executing them:
+### Dry-run (safe preview)
+- Dry-run mode prints all commands without executing them:
 bash launch_viralDB_download.sh --dry-run
 
-This is ideal for:
+- This is ideal for:
   • Reviewing commands
   • Debugging paths
   • Testing configuration changes
 
-#--------------------------------------------------------------------#
-Logging
-#--------------------------------------------------------------------#
+### Logging
 
-# Logs are writtenn to:
+- Logs are writtenn to:
 logs/viraldb_<DATE>.log
 
-# note:
+- note:
   • Logs are not written during dry-run (clean output).
   • Each run has a unique timestamped log.
 
-#--------------------------------------------------------------------#
-Reproducibility and auditing
-#--------------------------------------------------------------------#
-
-When not in dry-run mode, the pipeline automatically:
+### Reproducibility and auditing
+- When not in dry-run mode, the pipeline automatically:
   • Creates a run manifest
   • Records:
     • Pipeline version
@@ -180,21 +148,17 @@ When not in dry-run mode, the pipeline automatically:
     • Configuration snapshot
     • Generates checksums (sha256) for key outputs
 
-This enables:
+- This enables:
   • Exact reruns (resume from last successful step)
   • Provenance tracking
   • Long-term reproducibility
-
 
 Feature				Default
 --dry-run			off
 --validate			off
 Manifest + checksums		auto
 
-#--------------------------------------------------------------------#
-Output example
-#--------------------------------------------------------------------#
-
+### Output example
 20260302_viralDB/
 ├── ncbi_viral__ALL_FAMILIES.fasta
 ├── ncbi_viral__ALL_FAMILIES__taxonomy.fasta
@@ -209,27 +173,19 @@ Output example
 ├── representatives__all__c0.990000.fasta
 └── manifest/
 
-#--------------------------------------------------------------------#
-Why Bash (and not a worflow engine)?
-#--------------------------------------------------------------------#
-
-This pipeline intentionally avoids heavy workflow engines to:
+### Why Bash (and not a worflow engine)?
+- This pipeline intentionally avoids heavy workflow engines to:
   • Reduce cognitive overhead
   • Keep execution transparent
-  • Match real HPC usage patterns
+  • Match HPC usage patterns
   • Enable easy debugging and maintenance
 
-It can be run:
+- It can be run:
   • Interactively
   • As a batch job
   • Inside larger meta-workflows if needed
 
-#--------------------------------------------------------------------#
-Author
-#--------------------------------------------------------------------#
-
+### Author
 Roberto A. Barrero
 eResearch, Research Infrastructure – Academic Division
 Queensland University of Technology (QUT)
-
-
