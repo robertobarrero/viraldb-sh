@@ -205,19 +205,41 @@ This ensures representatives are:
 
 ## Example output
 ```text
-20260302_viralDB/
+├── 20260302_viralDB_representatives__all__c0.990000.fasta
+├── 20260302_viralDB_representatives__all__c0.995000.fasta
+├── 20260302_viralDB_representatives__all__c1.000000.fasta
+├── 20260302_viralDB_summary__all__c0.990000.tsv
+├── 20260302_viralDB_summary__all__c0.995000.tsv
+├── 20260302_viralDB_summary__all__c1.000000.tsv
+├── clusters_c1000.tsv
+├── clusters_c990.tsv
+├── clusters_c995.tsv
+├── clusters_mixed_species_members_c1000.tsv
+├── clusters_mixed_species_members_c990.tsv
+├── clusters_mixed_species_members_c995.tsv
+├── clusters_summary_c1000.tsv
+├── clusters_summary_c990.tsv
+├── clusters_summary_c995.tsv
+├── families
+├── logs
+├── manifest
+├── ncbi_viral__ALL_FAMILIES.data_report.jsonl
 ├── ncbi_viral__ALL_FAMILIES.fasta
 ├── ncbi_viral__ALL_FAMILIES__taxonomy.fasta
-├── unclassified_viroids_taxonomy.fasta
+├── ncbi_viral__ALL_FAMILIES__taxonomy_metadata.tsv
+├── ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy.fasta
 ├── ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy_filtered.fasta
-├── reps_all/
-├── clusters_summary_c1000.tsv
-├── clusters_mixed_species_members_c1000.tsv
-├── clusters_c1000.tsv
-├── representatives__all__c1.000000.fasta
-├── representatives__all__c0.995000.fasta
-├── representatives__all__c0.990000.fasta
-└── manifest/
+├── removed_Ns.tsv
+├── removed_short.tsv
+├── reps_all
+├── unclassified.fasta
+├── unclassified_viroids_taxonomy.fasta
+├── unclassified_viroids_taxonomy_metadata.tsv
+├── viroiddb_2021-06-06_src
+├── viroiddb_2021-06-06.zip
+└── viroiddb.fasta
+
+6 directories, 28 files
 ```
 ### Pipeline philosophy
 This pipeline intentionally avoids heavy workflow engines to:
@@ -233,5 +255,5 @@ It can be run:
 
 ### Author
 Roberto A. Barrero
-eResearch, Research Infrastructure – Academic Division
+eResearch, Research Infrastructure, Academic Division,
 Queensland University of Technology (QUT)
