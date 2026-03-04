@@ -4,9 +4,9 @@
 
 <h1 align="center">Plant Viruses and Viroids Database</h1>
 
-<h2 align="center">
+<h3 align="center">
 A lightweight pipeline for building harmonized viral databases from NCBI Virus and ViroidDB
-</h2>
+</h3>
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-v0.1-blue">
