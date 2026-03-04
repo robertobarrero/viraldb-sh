@@ -34,7 +34,7 @@ The pipeline is designed to be:
 - ✅ **Safe to test** — dry-run mode prints commands without executing
 
 
-## Pipeline description
+## Pipeline Overview
 
 The pipeline performs the following steps:
 
@@ -63,10 +63,8 @@ The pipeline performs the following steps:
    - For reproducibility and auditing
 
 
-<h2 align="center">Pipeline overview</h2>
-
 <p align="center">
-  <img src="assets/pipeline_overview.png" width="500">
+  <img src="assets/pipeline_overview.png" width="350">
 </p>
 
 
