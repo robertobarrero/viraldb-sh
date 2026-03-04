@@ -5,9 +5,6 @@ logs/
 manifest/
 *.log
 
-# Inputs
-config_viralDB.txt
-
 # Large data / databases
 *.fasta
 *.fa
