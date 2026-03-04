@@ -285,9 +285,10 @@ It can be run:
 - Inside larger meta-workflows if needed
 
 ### Author
-**Roberto A. Barrero**
-eResearch, Research Infrastructure, Academic Division,
-Queensland University of Technology (QUT), Australia
+**Roberto A. Barrero**<br>
+eResearch, Research Infrastructure, Academic Division<br>
+Queensland University of Technology (QUT), Australia<br>
+ORCID: https://orcid.org/0000-0002-7735-665X 
 
 ## Citation
 
