@@ -1,11 +1,18 @@
 <p align="center">
-  <img src="assets/viraldb-sh_logo.png" width="350">
+  <img src="assets/viraldb-sh_logo.png" width="420">
 </p>
 
-<h1 align="center">viraldb-sh</h1>
+<h1 align="center">Plant Viral Database</h1>
+
+<h2 align="center">
+A lightweight pipeline for building harmonized viral databases from NCBI Virus and ViroidDB
+</h2>
 
 <p align="center">
-A lightweight pipeline for building harmonized viral databases from NCBI Virus and ViroidDB
+  <img src="https://img.shields.io/badge/version-v0.1-blue">
+  <img src="https://img.shields.io/badge/platform-HPC-orange">
+  <img src="https://img.shields.io/badge/language-Bash%20%2B%20Python-purple">
+  <img src="https://img.shields.io/badge/license-MIT-green">
 </p>
 
 **viraldb-sh v0.1** is a lightweight, Bash-based pipeline for building a curated viral database
