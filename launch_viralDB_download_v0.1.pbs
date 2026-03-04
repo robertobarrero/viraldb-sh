@@ -14,7 +14,7 @@ set -euo pipefail
 # -----------------------------
 # Pipeline installation dir (STATIC)
 # -----------------------------
-PIPELINE_DIR="/work/eresearch_bio/curated_VirDB/workflows/viraldb-sh/v0.1"
+PIPELINE_DIR="${HOME}/got/viraldb-sh"
 
 # -----------------------------
 # Determine run directory (PBS / SLURM / local)
