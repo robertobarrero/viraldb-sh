@@ -66,7 +66,7 @@ The pipeline performs the following steps:
 <h2 align="center">Pipeline overview</h2>
 
 <p align="center">
-  <img src="assets/pipeline_overview.png" width="700">
+  <img src="assets/pipeline_overview.png" width="500">
 </p>
 
 
