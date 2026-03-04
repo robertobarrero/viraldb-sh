@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/viraldb-sh_logo.png" width="420">
+  <img src="assets/viraldb-sh_logo.png" width="380">
 </p>
 
-<h1 align="center">Plant Viral Database</h1>
+<h1 align="center">Plant Viruses and Viroids Database</h1>
 
 <h2 align="center">
 A lightweight pipeline for building harmonized viral databases from NCBI Virus and ViroidDB
