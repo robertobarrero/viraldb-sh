@@ -62,7 +62,7 @@ The pipeline performs the following steps:
        - Select curated RefSeq sequence if present in cluster and has >=90% of the longest sequence's length
        - Select sequence with "complete genome / segment", if none availble in cluster then selects "partial"
        - Select sequence with strain annotation
-       - Finally if none of the above resolves the representative, then select the longest sequence (cd-hit selected representative)  
+       - Finally if none of the above resolves the representative, then selects the longest sequence (cd-hit representative)  
 
 7. **Generate checksums & manifest**
    - For reproducibility and auditing
@@ -219,7 +219,7 @@ FEATURE                     DEFAULT
 Manifest + checksums        automatic
 ```
 
-## Phase 2 representative selection 
+## Representative selection 
 Representative sequences are selected per CD-HIT cluster (e.g., identity >=99.5%) using a policy-driven, hierarchical decision process using five criteria:
 1.	**Majority annotation**
 	-	Determine the dominant taxonomic annotation within the cluster
