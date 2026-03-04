@@ -5,7 +5,7 @@
 <h1 align="center">Plant Virus and Viroid Database</h1>
 
 <h3 align="center">
-A lightweight pipeline for building a curated plant viral database from NCBI Virus and ViroidDB
+A lightweight pipeline for building curated plant viral databases from NCBI Virus and ViroidDB
 </h3>
 
 <p align="center">
