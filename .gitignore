@@ -19,6 +19,9 @@ config_viralDB.txt
 reps_all/
 ncbi_dataset/
 
+# backup files
+*.bk
+
 # Conda / env caches
 .conda/
 .venv/
