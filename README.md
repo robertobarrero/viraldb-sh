@@ -2,10 +2,10 @@
   <img src="assets/viraldb-sh_logo.png" width="380">
 </p>
 
-<h1 align="center">Plant Viruses and Viroids Database</h1>
+<h1 align="center">Plant Virus and Viroid Database</h1>
 
 <h3 align="center">
-A lightweight pipeline for building a curated plant virus and viroid database from NCBI Virus and ViroidDB
+A lightweight pipeline for building a curated plant viral database from NCBI Virus and ViroidDB
 </h3>
 
 <p align="center">
@@ -69,6 +69,7 @@ The pipeline performs the following steps:
 
 
 ## Repository structure
+
 ```text
 viraldb-sh/
 ├── assets
@@ -284,6 +285,18 @@ It can be run:
 - Inside larger meta-workflows if needed
 
 ### Author
-Roberto A. Barrero
+**Roberto A. Barrero**
 eResearch, Research Infrastructure, Academic Division,
-Queensland University of Technology (QUT)
+Queensland University of Technology (QUT), Australia
+
+## Citation
+
+If you use **viraldb-sh** in your research please cite:
+
+Barrero R.A. *viraldb-sh: A lightweight pipeline for building curated viral databases from NCBI Virus and ViroidDB.*
+
+## License
+
+This project is licensed under the **MIT License**.
+
+See the [LICENSE](LICENSE) file for details.
