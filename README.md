@@ -55,9 +55,14 @@ The pipeline performs the following steps:
 5. **Summarise clusters**
    - Detect and report mixed-species clusters
 
-6. **Phase 2 representative selection**
+6. **Representative selection**
    - Policy-based representative selection
-   - Criteria: majority seqs in cluster's annotation -> RefSeq curated -> complete genome / segment -> strain -> longest 
+   - Criteria: 
+       - Use lineage information of majority of sequences in each cluster
+       - Select curated RefSeq sequence if present in cluster and has >=90% of the longest sequence's length
+       - Select sequence with "complete genome / segment", if none availble in cluster then selects "partial"
+       - Select sequence with strain annotation
+       - Finally if none of the above resolves the representative, then select the longest sequence (cd-hit selected representative)  
 
 7. **Generate checksums & manifest**
    - For reproducibility and auditing
