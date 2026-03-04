@@ -5,7 +5,7 @@
 <h1 align="center">Plant Viruses and Viroids Database</h1>
 
 <h3 align="center">
-A lightweight pipeline for building harmonized viral databases from NCBI Virus and ViroidDB
+A lightweight pipeline for building a harmonized viral database from NCBI Virus and ViroidDB
 </h3>
 
 <p align="center">
@@ -34,7 +34,7 @@ The pipeline is designed to be:
 - ✅ **Safe to test** — dry-run mode prints commands without executing
 
 
-## Pipeline overview
+## Pipeline description
 
 The pipeline performs the following steps:
 
@@ -63,17 +63,34 @@ The pipeline performs the following steps:
    - For reproducibility and auditing
 
 
+<h2 align="center">Pipeline overview</h2>
+
+<p align="center">
+  <img src="assets/pipeline_overview.png" width="700">
+</p>
+
+
 ## Repository structure
 ```text
 viraldb-sh/
-├── bin/                        # Python scripts
-├── lib/                        # Shared Bash utilities
-├── envs/
-│   └── viraldb.yaml            # Conda environment definition
-├── config_viralDB.txt          # User-editable configuration
-├── launch_viralDB_download.sh
-├── launch_viralDB_download.pbs
-├── launch_viralDB_download.slurm
+├── assets
+│   ├── pipeline_overview.png
+│   └── viraldb-sh_logo.png
+├── bin                                # Python scripts
+├── CHANGELOG.md
+├── config
+│   ├── config_viralDB.txt             # User-editable configuration
+│   └── plant_virus_families.tsv
+├── envs
+│   └── viraldb.yaml                   # Conda environment definition
+├── examples
+│   └── config_viralDB_example.txt
+├── launch_viralDB_download_v0.1.pbs
+├── launch_viralDB_download_v0.1.sh
+├── launch_viralDB_download_v0.1.slurm
+├── lib                                
+│   └── pipeline_utils.sh              # Shared Bash utilities
+├── LICENSE
 └── README.md
 ```
 ## Requirements
