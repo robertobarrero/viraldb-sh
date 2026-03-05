@@ -33,7 +33,7 @@ LOGDIR="${RUN_DIR}/logs"
 # -----------------------------
 # Load config + utils
 # -----------------------------
-CONFIG_FILE="${PIPELINE_DIR}/config_viralDB.txt"
+CONFIG_FILE="${PIPELINE_DIR}/config/config_viralDB.txt"
 source "${CONFIG_FILE}"
 source "${PIPELINE_DIR}/lib/pipeline_utils.sh"
 
