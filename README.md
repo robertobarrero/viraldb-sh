@@ -299,7 +299,8 @@ ORCID: https://orcid.org/0000-0002-7735-665X 
 
 If you use **viraldb-sh** in your research please cite:
 
-Barrero R.A. *viraldb-sh: A lightweight pipeline for building curated viral databases from NCBI Virus and ViroidDB.*
+Barrero R.A. *viraldb-sh: A lightweight pipeline for building curated plant viral databases.*
+https://doi.org/10.5281/zenodo.18871290
 
 ## License
 
