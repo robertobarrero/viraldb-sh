@@ -36,7 +36,7 @@ PREFIX="${DATE}_viralDB"
 
 # Compute resources
 CPUS=4
-CDHIT_MEM_MB=8000                   # 0 = unlimited for cd-hit-est wrapper. Note units in MB.
+CDHIT_MEM_MB=16000                   # 0 = unlimited for cd-hit-est wrapper. Note units in MB.
 
 # ⚠️ ⚠️ ⚠️  Viral families - A list of plant viral families is included in the BIN_DIR folder. Modify path if using a different file.
 # ⚠️ ⚠️ ⚠️  the file contains one family name per row

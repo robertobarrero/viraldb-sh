@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --job-name=fetch_viralDB
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=8G
+#SBATCH --mem=16G
 #SBATCH --time=24:00:00
 #SBATCH --output=fetch_viralDB.%j.out
 #SBATCH --error=fetch_viralDB.%j.err
