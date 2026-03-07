@@ -152,47 +152,51 @@ run_cmd "python3 ${BIN_DIR}/sort_fasta_by_species_v1.5.py \
   --out_sorted_fasta ${OUTDIR}/ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy_filtered.fasta"
 
 # -----------------------------
-# STEP 5: Cluster
+# STEP 5: Cluster filtered sequences
 # -----------------------------
-log "🔹🔹🔹 Step 5: cluster all sequences (select Phase 1 representatives)"
+log "🔹🔹🔹 Step 5: cluster filtered sequences"
 
 # cd-hit-est -M expects MB; config provides MB and it will replace the memory assigned below
 : "${CDHIT_MEM_MB:=0}"   # 0 = unlimited (matches cd-hit-est behavior)
 
 run_cmd "python3 ${BIN_DIR}/cluster_and_select_reps_v0.2.py \
   --fasta ${OUTDIR}/ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy_filtered.fasta \
-  --outdir ${OUTDIR}/reps_all \
+  --outdir ${OUTDIR}/representatives \
   --group all \
-  --identity 1.0 0.995 0.99 \
+  --identity 1.0 0.995 0.99 0.95 0.90 \
   --threads ${CPUS} \
   --memory ${CDHIT_MEM_MB} \
   --verbose"
 
 # -----------------------------
-# STEP 6: Summarise clusters (c1000, c995, c990)
+# STEP 6: Summarise clusters
 # -----------------------------
-log "🔹🔹🔹 Step 6: summarise clusters (c1000, c995, c990)"
+log "🔹🔹🔹 Step 6: summarise clusters"
 
 # Define the identity thresholds you clustered with
-IDENTITIES=("1.0" "0.995" "0.99")
+IDENTITIES=("1.0" "0.995" "0.99" "0.95" "0.90")
 
 for ID in "${IDENTITIES[@]}"; do
   # Format exactly as the clustering wrapper writes it: cX.XXXXXX
   CDIR=$(printf "c%.6f" "${ID}")
 
-  # Map to your human label used in filenames
+  # Map to the labels used in output filenames in step 5
   if [[ "${ID}" == "1.0" ]]; then
     LABEL="c1000"
   elif [[ "${ID}" == "0.995" ]]; then
     LABEL="c995"
   elif [[ "${ID}" == "0.99" ]]; then
     LABEL="c990"
+  elif [[ "${ID}" == "0.95" ]]; then
+    LABEL="c950"
+  elif [[ "${ID}" == "0.90" ]]; then
+    LABEL="c900"
   else
     # fallback (shouldn’t happen with your defaults)
     LABEL="${CDIR}"
   fi
 
-  CLSTR_FILE="${OUTDIR}/reps_all/all_groups/ALL/${CDIR}/reps.fasta.clstr"
+  CLSTR_FILE="${OUTDIR}/representatives/all_groups/ALL/${CDIR}/reps.fasta.clstr"
 
   # Skip gracefully if a given clstr is missing (HPC-safe)
   if [[ ! -s "${CLSTR_FILE}" ]]; then
@@ -213,11 +217,11 @@ for ID in "${IDENTITIES[@]}"; do
 done
 
 # -----------------------------
-# STEP 7: Phase 2 reps selection
+# STEP 7: Representatives selection
 # -----------------------------
-log "🔹🔹🔹 Step 7: phase2 representative selection"
+log "🔹🔹🔹 Step 7: Selection of representatives"
 run_cmd "python3 ${BIN_DIR}/phase2_select_reps_from_cdhit_v0.3.py \
-  --reps_all_dir ${OUTDIR}/reps_all \
+  --reps_all_dir ${OUTDIR}/representatives \
   --policy ${PHASE2_POLICY} \
   --refseq_min_len_frac ${REFSEQ_MIN_LEN_FRAC} \
   --prefix ${DATE}_viralDB \
@@ -238,7 +242,9 @@ if [[ "${DRY_RUN}" -eq 0 ]]; then
     "${OUTDIR}/clusters_mixed_species_members_c1000.tsv" \
     "${OUTDIR}/representatives__all__c1.000000.fasta" \
     "${OUTDIR}/representatives__all__c0.995000.fasta" \
-    "${OUTDIR}/representatives__all__c0.990000.fasta"
+    "${OUTDIR}/representatives__all__c0.990000.fasta" \
+    "${OUTDIR}/representatives__all__c0.950000.fasta" \
+    "${OUTDIR}/representatives__all__c0.900000.fasta"
 
   finish_manifest
 fi
