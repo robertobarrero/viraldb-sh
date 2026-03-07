@@ -238,11 +238,11 @@ if [[ "${DRY_RUN}" -eq 0 ]]; then
     "${OUTDIR}/ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy_filtered.fasta" \
     "${OUTDIR}/clusters_summary_c1000.tsv" \
     "${OUTDIR}/clusters_mixed_species_members_c1000.tsv" \
-    "${OUTDIR}/representatives__all__c1.000000.fasta" \
-    "${OUTDIR}/representatives__all__c0.995000.fasta" \
-    "${OUTDIR}/representatives__all__c0.990000.fasta" \
-    "${OUTDIR}/representatives__all__c0.950000.fasta" \
-    "${OUTDIR}/representatives__all__c0.900000.fasta" 
+    "${OUTDIR}/${DATE}_viralDB_representatives__all__c1.000000.fasta" \
+    "${OUTDIR}/${DATE}_viralDB_representatives__all__c0.995000.fasta" \
+    "${OUTDIR}/${DATE}_viralDB_representatives__all__c0.990000.fasta" \
+    "${OUTDIR}/${DATE}_viralDB_representatives__all__c0.950000.fasta" \
+    "${OUTDIR}/${DATE}_viralDB_representatives__all__c0.900000.fasta"
 
   finish_manifest
 fi
