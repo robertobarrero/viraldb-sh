@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Author: Roberto A. Barrero, eResearch, Research Infrastructure, Academic Division, QUT
-# Date: 2026-03-02
-# This version runs in an desktop / laptop or interactive HPC session using bash / shell
+# Date: 2026-03-10
+# This version runs in a HPC cluster using PBS Pro scheduler
 # See README.md for details on how to run this script
 
 set -euo pipefail
@@ -36,6 +36,14 @@ source "${PIPELINE_DIR}/lib/pipeline_utils.sh"
 parse_modes "$@"
 
 # -----------------------------
+# Helper: require directory exists
+# -----------------------------
+require_dir() {
+  local d="$1"
+  [[ -d "$d" ]] || die "Required directory missing: $d"
+}
+
+# -----------------------------
 # Setup log dir (in run folder)
 # -----------------------------
 mkdir -p "${LOGDIR}"
@@ -52,7 +60,9 @@ log "OUTDIR   : ${OUTDIR}"
 log "DRY_RUN  : ${DRY_RUN}"
 log "VALIDATE : ${VALIDATE_ONLY}"
 
-# activate conda environment with necessary tools
+# -----------------------------
+# Activate conda environment with necessary tools
+# -----------------------------
 source ~/.bashrc
 conda activate "$CONDAENV"
 
@@ -68,11 +78,13 @@ require_exec cd-hit-est
 require_file "${VIRAL_FAMILIES_TSV}"
 
 require_dir_writable "${OUTDIR}"
-require_dir_writable "${OUTDIR}/${LOGDIR}"
+require_dir_writable "${LOGDIR}"
 
-# Validate python scripts exist
+# Validate required scripts exist
 require_file "${BIN_DIR}/download_viral_sequences_v0.9.py"
-require_file "${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_v0.2.py"
+require_file "${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_families_v0.8.py"
+require_file "${BIN_DIR}/enrich_headers_for_unclassified_viroids_v0.1.py"
+require_file "${BIN_DIR}/run_enrich_taxonomy_per_family.sh"
 require_file "${BIN_DIR}/sort_fasta_by_species_v1.5.py"
 require_file "${BIN_DIR}/cluster_and_select_reps_v0.2.py"
 require_file "${BIN_DIR}/summarise_cdhit_clstr_with_fasta.py"
@@ -93,43 +105,57 @@ if [[ "${DRY_RUN}" -eq 0 ]]; then
   record_versions
 fi
 
-# -----------------------------
-# STEP 1: Download
-# -----------------------------
-log "🔹🔹🔹 Step 1: download NCBI viral + ViroidDB"
-run_cmd "python3 ${BIN_DIR}/download_viral_sequences_v0.9.py \
-  --ncbi_viral \
-  --viroid_db \
-  --viral_families ${VIRAL_FAMILIES_TSV} \
-  --merge_reports \
-  --datasets_retries 3 \
-  --sleep_between_downloads 10 \
-  -o ${OUTDIR} \
-  --verbose"
+## -----------------------------
+## STEP 1: Download
+## -----------------------------
+#log "🔹🔹🔹 Step 1: download NCBI viral + ViroidDB"
+#
+#run_cmd "python3 ${BIN_DIR}/download_viral_sequences_v0.9.py \
+#  --ncbi_viral \
+#  --viroid_db \
+#  --viral_families ${VIRAL_FAMILIES_TSV} \
+#  --merge_reports \
+#  --datasets_retries 3 \
+#  --sleep_between_downloads 10 \
+#  -o ${OUTDIR} \
+#  --verbose"
 
 # -----------------------------
-# STEP 2: Enrich NCBI FASTA
+# STEP 2: Enrich NCBI FASTA per family
 # -----------------------------
-log "🔹🔹🔹 Step 2: enrich NCBI viral headers"
-run_cmd "python3 ${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_v0.2.py \
-  --fasta ${OUTDIR}/ncbi_viral__ALL_FAMILIES.fasta \
-  --datasets_report ${OUTDIR}/ncbi_viral__ALL_FAMILIES.data_report.jsonl \
-  --out_fasta ${OUTDIR}/ncbi_viral__ALL_FAMILIES__taxonomy.fasta \
-  --out_metadata ${OUTDIR}/ncbi_viral__ALL_FAMILIES__taxonomy_metadata.tsv \
-  --source NCBI_Virus \
-  --status NA \
-  --prev_db NA"
+log "🔹🔹🔹 Step 2: enrich NCBI viral headers per family"
+
+require_dir "${OUTDIR}/families"
+
+log "Detected family directories:"
+run_cmd "ls -1 ${OUTDIR}/families"
+
+run_cmd "bash ${BIN_DIR}/run_enrich_taxonomy_per_family.sh \
+  ${OUTDIR}/families \
+  ${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_families_v0.8.py"
+
+# -----------------------------
+# STEP 2b: Combine enriched family FASTA files
+# -----------------------------
+log "🔹🔹🔹 Step 2b: combine enriched family FASTA files"
+
+run_cmd "find ${OUTDIR}/families -type f -name '*_ncbi_viral_taxonomy.fasta' -print | sort > ${OUTDIR}/family_fasta_list.txt"
+
+run_cmd "if [[ -s ${OUTDIR}/family_fasta_list.txt ]]; then \
+  xargs cat < ${OUTDIR}/family_fasta_list.txt > ${OUTDIR}/ncbi_viral__ALL_FAMILIES__taxonomy.fasta; \
+else \
+  echo '[ERROR] No enriched family FASTA files found'; exit 1; \
+fi"
 
 # -----------------------------
 # STEP 3: Enrich viroids
 # -----------------------------
 log "🔹🔹🔹 Step 3: enrich unclassified viroids headers"
-run_cmd "python3 ${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_v0.2.py \
+
+run_cmd "python3 ${BIN_DIR}/enrich_headers_for_unclassified_viroids_v0.1.py \
   --fasta ${OUTDIR}/unclassified.fasta \
   --datasets_report ${OUTDIR}/ncbi_viral__ALL_FAMILIES.data_report.jsonl \
   --source ViroidDB \
-  --status NA \
-  --prev_db NA \
   --out_fasta ${OUTDIR}/unclassified_viroids_taxonomy.fasta \
   --out_metadata ${OUTDIR}/unclassified_viroids_taxonomy_metadata.tsv"
 
@@ -137,6 +163,7 @@ run_cmd "python3 ${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_v0.2
 # STEP 4: Merge + filter + sort
 # -----------------------------
 log "🔹🔹🔹 Step 4: merge + filter + sort"
+
 run_cmd "python3 ${BIN_DIR}/sort_fasta_by_species_v1.5.py \
   --fasta ${OUTDIR}/ncbi_viral__ALL_FAMILIES__taxonomy.fasta \
   --fasta2 ${OUTDIR}/unclassified_viroids_taxonomy.fasta \
@@ -150,14 +177,14 @@ run_cmd "python3 ${BIN_DIR}/sort_fasta_by_species_v1.5.py \
 # -----------------------------
 log "🔹🔹🔹 Step 5: cluster filtered sequences"
 
-# cd-hit-est -M expects MB; config provides MB and it will replace the memory assigned below
+# cd-hit-est -M expects MB; config provides MB
 : "${CDHIT_MEM_MB:=0}"   # 0 = unlimited (matches cd-hit-est behavior)
 
 run_cmd "python3 ${BIN_DIR}/cluster_and_select_reps_v0.2.py \
   --fasta ${OUTDIR}/ncbi_viral_unclassifiedViroids__ALL_FAMILIES__taxonomy_filtered.fasta \
   --outdir ${OUTDIR}/representatives \
   --group all \
-  --identity 1.0 0.995 0.99 0.95 0.90 \
+  --identity 1.0 0.995 0.99 0.98 0.95 \
   --threads ${CPUS} \
   --memory ${CDHIT_MEM_MB} \
   --verbose"
@@ -167,32 +194,28 @@ run_cmd "python3 ${BIN_DIR}/cluster_and_select_reps_v0.2.py \
 # -----------------------------
 log "🔹🔹🔹 Step 6: summarise clusters"
 
-# Define the identity thresholds you clustered with
-IDENTITIES=("1.0" "0.995" "0.99" "0.95" "0.90")
+IDENTITIES=("1.0" "0.995" "0.99" "0.98" "0.95")
 
 for ID in "${IDENTITIES[@]}"; do
-  # Format exactly as the clustering wrapper writes it: cX.XXXXXX
+
   CDIR=$(printf "c%.6f" "${ID}")
 
-  # Map to the labels used in output filenames in step 5
   if [[ "${ID}" == "1.0" ]]; then
     LABEL="c1000"
   elif [[ "${ID}" == "0.995" ]]; then
     LABEL="c995"
   elif [[ "${ID}" == "0.99" ]]; then
     LABEL="c990"
+  elif [[ "${ID}" == "0.98" ]]; then
+    LABEL="c980"	  
   elif [[ "${ID}" == "0.95" ]]; then
     LABEL="c950"
-  elif [[ "${ID}" == "0.90" ]]; then
-    LABEL="c900"
   else
-    # fallback (shouldn’t happen with your defaults)
     LABEL="${CDIR}"
   fi
 
   CLSTR_FILE="${OUTDIR}/representatives/all_groups/ALL/${CDIR}/reps.fasta.clstr"
 
-  # Skip gracefully if a given clstr is missing (HPC-safe)
   if [[ ! -s "${CLSTR_FILE}" ]]; then
     log "[WARN] Missing .clstr for ${CDIR}: ${CLSTR_FILE} (skipping)"
     continue
@@ -211,9 +234,10 @@ for ID in "${IDENTITIES[@]}"; do
 done
 
 # -----------------------------
-# STEP 7: Representatives selection
+# STEP 7: Selection of representatives
 # -----------------------------
 log "🔹🔹🔹 Step 7: Selection of representatives"
+
 run_cmd "python3 ${BIN_DIR}/phase2_select_reps_from_cdhit_v0.3.py \
   --reps_all_dir ${OUTDIR}/representatives \
   --policy ${PHASE2_POLICY} \
@@ -237,11 +261,10 @@ if [[ "${DRY_RUN}" -eq 0 ]]; then
     "${OUTDIR}/${DATE}_viralDB_representatives__all__c1.000000.fasta" \
     "${OUTDIR}/${DATE}_viralDB_representatives__all__c0.995000.fasta" \
     "${OUTDIR}/${DATE}_viralDB_representatives__all__c0.990000.fasta" \
-    "${OUTDIR}/${DATE}_viralDB_representatives__all__c0.950000.fasta" \
-    "${OUTDIR}/${DATE}_viralDB_representatives__all__c0.900000.fasta"
+    "${OUTDIR}/${DATE}_viralDB_representatives__all__c0.980000.fasta" \
+    "${OUTDIR}/${DATE}_viralDB_representatives__all__c0.950000.fasta" 
 
   finish_manifest
 fi
 
 log "✅ Done."
-
