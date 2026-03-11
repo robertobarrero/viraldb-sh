@@ -40,7 +40,7 @@ CDHIT_MEM_MB=16000                   # 0 = unlimited for cd-hit-est wrapper. Not
 
 # ⚠️ ⚠️ ⚠️  Viral families - A list of plant viral families is included in the BIN_DIR folder. Modify path if using a different file.
 # ⚠️ ⚠️ ⚠️  the file contains one family name per row
-VIRAL_FAMILIES_TSV="${PIPELINE_DIR}/config/plant_virus_families.tsv"
+VIRAL_FAMILIES_TSV="${PIPELINE_DIR}/config/plant_virus_families.txt"
 
 # Download tool settings
 DATASETS_RETRIES=3
