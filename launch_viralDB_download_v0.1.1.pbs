@@ -86,7 +86,7 @@ require_dir_writable "${LOGDIR}"
 
 # Validate required scripts exist
 require_file "${BIN_DIR}/download_viral_sequences_v0.9.py"
-require_file "${BIN_DIR}/enrich_headers_with_lineage_from_datasets_jsonl_families_v0.8.py"
+require_file "${BIN_DIR}/enrich_headers_for_NCBI_Virus_with_lineage_from_datasets_jsonl_v0.1.py"
 require_file "${BIN_DIR}/enrich_headers_for_unclassified_viroids_v0.1.py"
 require_file "${BIN_DIR}/run_enrich_taxonomy_per_family.sh"
 require_file "${BIN_DIR}/sort_fasta_by_species_v1.5.py"
@@ -109,20 +109,20 @@ if [[ "${DRY_RUN}" -eq 0 ]]; then
   record_versions
 fi
 
-## -----------------------------
-## STEP 1: Download
-## -----------------------------
-#log "🔹🔹🔹 Step 1: download NCBI viral + ViroidDB"
-#
-#run_cmd "python3 ${BIN_DIR}/download_viral_sequences_v0.9.py \
-#  --ncbi_viral \
-#  --viroid_db \
-#  --viral_families ${VIRAL_FAMILIES_TSV} \
-#  --merge_reports \
-#  --datasets_retries 3 \
-#  --sleep_between_downloads 10 \
-#  -o ${OUTDIR} \
-#  --verbose"
+# -----------------------------
+# STEP 1: Download
+# -----------------------------
+log "🔹🔹🔹 Step 1: download NCBI viral + ViroidDB"
+
+run_cmd "python3 ${BIN_DIR}/download_viral_sequences_v0.9.py \
+  --ncbi_viral \
+  --viroid_db \
+  --viral_families ${VIRAL_FAMILIES_TSV} \
+  --merge_reports \
+  --datasets_retries 3 \
+  --sleep_between_downloads 10 \
+  -o ${OUTDIR} \
+  --verbose"
 
 # -----------------------------
 # STEP 2: Enrich NCBI FASTA per family
