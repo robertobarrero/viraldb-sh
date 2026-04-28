@@ -43,7 +43,7 @@ The pipeline performs the following steps:
    - ViroidDB
 
 2. **Enrich FASTA headers**
-   - Adds taxonomic linease from NCBI Datasets JSONL
+   - Adds taxonomic lineage from NCBI Datasets JSONL
 
 3. **Merge, filter, and sort sequences per species**
    - Remove short sequences (e.g. length < 200 bp)
